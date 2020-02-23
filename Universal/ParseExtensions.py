@@ -11,6 +11,9 @@ def file_length(file_name):
     return i + 1
 
 
+old_pct = 0
+
+
 def print_progressbar(progress, maximum, prefix=''):
     """
     Prints a progressbar in the stdin.
@@ -20,8 +23,13 @@ def print_progressbar(progress, maximum, prefix=''):
     :param prefix: Words to write before the progressbar
     :return: None
     """
+    global old_pct
     pct = int(100 * (progress / maximum))
-    print('\r{: <50} [{:-<50}] {}%'.format(prefix, '#' * (pct // 2), pct), end='')
+    if progress + 1 >= maximum:
+        print('\033[2K\r \r', end='')
+    elif pct != old_pct:
+        print('\r{: <50} [{:-<50}] {}%'.format(prefix, '#' * (pct // 2), pct), end='')
+        old_pct = pct
 
 
 def delimited_reader(reader, *delimiters):

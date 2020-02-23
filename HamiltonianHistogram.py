@@ -1,7 +1,7 @@
-from Modules import Plot
-from Modules.Analyze.FindMax import analyze_set_top
-from Modules.Analyze.Histogram import get_histogram, get_bounds
-from Modules.Parse.OutputParser import parse_output
+from MARS_CI.Parser import parse_auto
+from Universal import Plot
+from Universal.Analyze.FindMax import analyze_set_top
+from Universal.Analyze.Histogram import get_histogram, get_bounds
 
 ##########################################################
 # Automatic hamiltonian histogram plotter by aryavorskiy #
@@ -12,17 +12,20 @@ from Modules.Parse.OutputParser import parse_output
 while True:
     title = input('Title? ')
     pl = Plot.Plot(title)
-    data = parse_output(input('Filename? '))
-    bounds = get_bounds(data[1])
+    blocks = parse_auto(input('Filename? '))
+    ham_dir = [set_info.hamiltonian for block in blocks for set_info in block if set_info.set_type == 'Independent']
+    ham_dep = [set_info.hamiltonian for block in blocks for set_info in block if set_info.set_type == 'Dependent']
+    bounds = get_bounds(ham_dep)
     print('Graph xrange set to {}'.format(bounds))
 
-    histo_indep = get_histogram(data[0], *bounds, 100, mode='curve')
-    pl.add_plot_data(histo_indep, 'b-', legend='Directing runs')
+    histogram_dir = get_histogram(ham_dir, *bounds, 100, mode='curve')
+    pl.add_plot_data(histogram_dir, 'b-', legend='Directing runs')
     print('Analyzing directing runs:')
-    analyze_set_top(data[0], 5)
+    analyze_set_top(ham_dir, 5)
 
-    histo_dep = get_histogram(data[1], *bounds, 100, mode='curve')
-    pl.add_plot_data(histo_dep, 'r-', legend='Dependent runs')
+    histogram_dep = get_histogram(ham_dep, *bounds, 100, mode='curve')
+    pl.add_plot_data(histogram_dep, 'r-', legend='Dependent runs')
     print('Analyzing dependent runs:')
-    analyze_set_top(data[1], 10)
+    analyze_set_top(ham_dep, 10)
     pl.plot_all()
+    print()

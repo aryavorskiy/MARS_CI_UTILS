@@ -1,4 +1,4 @@
-from Modules.DataTypes import Mat
+from MARS_CI.DataTypes import Mat
 
 ##########################################################################
 # Local minimum checker by aryavorskiy                                   #
@@ -13,3 +13,4 @@ while True:
     print(f'Hamiltonian: {mat.hamiltonian(spins)}')
     is_local_minimum = mat.is_local_minimum(spins)
     print({True: 'Local minimum', False: 'Not local minimum'}[is_local_minimum])
+    print()

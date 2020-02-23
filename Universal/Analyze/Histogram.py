@@ -22,15 +22,16 @@ def get_histogram(data, start, end, count, mode='center'):
     x_coords = []
     y_coords = []
     for final_point in histogram_points:
+        prob_density = 0 if len(data) == 0 else final_point[1] / (step * len(data))
         if mode == 'curve':
             x_coords.extend(final_point[0])
-            y_coords.extend((final_point[1] / (step * len(data)),) * 2)
+            y_coords.extend((prob_density,) * 2)
         elif mode == 'center':
             x_coords.append(sum(final_point[0]) / 2)
-            y_coords.append(final_point[1] / (step * len(data)))
+            y_coords.append(prob_density)
         elif mode == 'left':
             x_coords.append(final_point[0][0])
-            y_coords.append(final_point[1] / (step * len(data)))
+            y_coords.append(prob_density)
 
     return x_coords, y_coords
 

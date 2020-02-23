@@ -1,5 +1,5 @@
-from Modules.Analyze.FindMax import get_top
-from Modules.Parse.LogParser import parse_log, split_log_data_by_sets
+from MARS_CI.Parser import parse_log
+from Universal.Analyze.FindMax import get_top
 
 ##################################################
 # Automatic block config composer by aryavorskiy #
@@ -8,20 +8,19 @@ from Modules.Parse.LogParser import parse_log, split_log_data_by_sets
 ##################################################
 
 while True:
-    not_simplified_data = parse_log(input('Filename? '))
-    simplified_data = split_log_data_by_sets(not_simplified_data)
-    top_size = 4
-    top_data = get_top(simplified_data, top_size, lambda x, y: x.hamiltonian < y.hamiltonian)
-    top_data = [a[0] for a in top_data]
+    sets = [set_info for block in parse_log(input('Filename? ')) for set_info in block]
+    top_size = int(input('How many directing trajectories? '))
+    top_data = [a[0] for a in get_top(sets, top_size, lambda x, y: x.hamiltonian < y.hamiltonian)]
     directing_sources = []
-    temperatures = [ds.start_temperature for ds in top_data]
     print('Hamiltonian from {} to {}; temperature from {} to {}'.
-          format(top_data[0].hamiltonian, top_data[-1].hamiltonian, temperatures[0], temperatures[-1]))
+          format(top_data[0].hamiltonian, top_data[-1].hamiltonian, top_data[0].start_temperature,
+                 top_data[1].start_temperature))
     for top_record in top_data:
         if top_record.initial_spins not in directing_sources:
             directing_sources.append(top_record.initial_spins)
             directing_sources.append(top_record.initial_spins * -1)
-    dependent_trajectories = 10
+    dependent_trajectories = int(input('How many dependent trajectories? '))
+    print(f'Block contains {len(directing_sources)} directing and {dependent_trajectories} dependent trajectories')
 
     writer = open(input('Where to write block? '), 'w')
     writer.write(f'{dependent_trajectories + len(directing_sources)}\n')
@@ -38,3 +37,4 @@ while True:
     writer.write('{}\n'.format(' '.join([str(a) for a in list(range(len(directing_sources)))])) *
                  dependent_trajectories)
     writer.close()
+    print()
