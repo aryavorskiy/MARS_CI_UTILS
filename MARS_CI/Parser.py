@@ -1,7 +1,8 @@
 import numpy as np
 
-from MARS_CI.DataTypes import NpArray, BlockInfo
-from Universal.ParseExtensions import file_length, print_progressbar
+from MARS_CI.DataTypes import BlockInfo, LogInfo, SetType
+from Universal.DataTypes import NpArray
+from Universal.ParseUtils import file_length, print_progressbar
 
 
 def parse_auto(file, verbose=True):
@@ -48,15 +49,15 @@ def parse_output(output_file, verbose=True):
         for word in line.split()[1:]:  # Ignore first column
             try:
                 if word[0] == '(' and word[-1] == ')':
-                    block.append_set(hamiltonian=float(word[1:-1]), set_type='No-anneal')
+                    block.append_set(hamiltonian=float(word[1:-1]), set_type=SetType.NO_ANNEAL)
                 elif word[0] == '<' and word[-1] == '>':
-                    block.append_set(hamiltonian=float(word[1:-1]), set_type='Independent')
+                    block.append_set(hamiltonian=float(word[1:-1]), set_type=SetType.INDEPENDENT)
                 else:
-                    block.append_set(hamiltonian=float(word), set_type='Dependent')
+                    block.append_set(hamiltonian=float(word), set_type=SetType.DEPENDENT)
             except ValueError:
                 break
         blocks.append(block)
-    return blocks
+    return LogInfo(blocks)
 
 
 def parse_log(log_file, preserve_initial_spins=True, verbose=True):
@@ -128,4 +129,4 @@ def parse_log(log_file, preserve_initial_spins=True, verbose=True):
                 line_no += 1
             except StopIteration:
                 break
-    return blocks
+    return LogInfo(blocks)

@@ -1,3 +1,4 @@
+from MARS_CI.DataTypes import SetType
 from MARS_CI.Parser import parse_auto
 from Universal import Plot
 from Universal.Analyze.FindMax import analyze_set_top
@@ -11,13 +12,9 @@ from Universal.Analyze.FindMax import analyze_set_top
 while True:
     title = input('Title? ')
     pl = Plot.Plot(title)
-    blocks = parse_auto(input('Filename? '))
-    temp_dir = [set_info.start_temperature for block in blocks for set_info in block if
-                set_info.set_type == 'Independent']
-    temp_dep = [set_info.start_temperature for block in blocks for set_info in block if
-                set_info.set_type == 'Dependent']
-    ham_dir = [set_info.hamiltonian for block in blocks for set_info in block if set_info.set_type == 'Independent']
-    ham_dep = [set_info.hamiltonian for block in blocks for set_info in block if set_info.set_type == 'Dependent']
+    log = parse_auto(input('Filename? '))
+    temp_dir, temp_dep = map(log.select_type, [SetType.INDEPENDENT, SetType.DEPENDENT], ['start_temperature'] * 2)
+    ham_dir, ham_dep = map(log.select_type, [SetType.INDEPENDENT, SetType.DEPENDENT], ['hamiltonian'] * 2)
 
     pl.add_plot_data((temp_dir, ham_dir), 'b^', legend='Directing runs')
     print('Analyzing directing runs:')

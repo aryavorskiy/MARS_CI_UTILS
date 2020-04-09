@@ -46,7 +46,7 @@ def delimited_reader(reader, *delimiters):
         if type(delimiter) != str:
             raise TypeError(f'Delimiter type should be string, not {type(delimiter)}')
         if len(delimiter) != 1:
-            raise ValueError('Invalid delimiter: must be char')
+            raise ValueError(f'Invalid delimiter #{delimiters.index(delimiter)}: must be char, not {type(delimiter)}')
     while True:
         word = ''
         letter = reader.read(1)
@@ -55,5 +55,5 @@ def delimited_reader(reader, *delimiters):
             letter = reader.read(1)
         if word == letter == '':
             return
-        else:
+        elif word != '':
             yield word

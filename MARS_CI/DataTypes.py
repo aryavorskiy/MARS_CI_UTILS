@@ -1,55 +1,5 @@
-import numpy as np
-
-from Universal.ParseExtensions import delimited_reader, print_progressbar
-
-
-class NpArray:
-    """
-    Custom realization of NumPy array. Compare method overridden to make comparison of complex objects available.
-    Added the append() method to achieve more compatibility.
-    """
-
-    def __init__(self, *args, **kwargs):
-        self.__np_arr = np.array(*args, **kwargs)
-
-    def append(self, element):
-        """
-        Appends an element to the array.
-        Slow method, avoid intense usage.
-
-        :param element: Element to add
-        :return: None
-        """
-        self.__np_arr = np.append(self.__np_arr, element)
-
-    def __getitem__(self, item):
-        return self.__np_arr[item]
-
-    def __setitem__(self, key, value):
-        self.__np_arr[key] = value
-
-    def __len__(self):
-        return len(self.__np_arr)
-
-    def __str__(self):
-        return ' '.join(str(s) for s in self.__np_arr)
-
-    def __mul__(self, other):
-        output = NpArray(self)
-        for i in range(len(output)):
-            output[i] *= other
-        return output
-
-    def __eq__(self, other):
-        if len(self) != len(other):
-            return False
-        for i in range(len(self)):
-            if self[i] != other[i]:
-                return False
-        return True
-
-    def __repr__(self):
-        return 'MyArray({})'.format(repr(list(self.__np_arr)))
+from Universal.DataTypes import NpArray
+from Universal.ParseUtils import delimited_reader, print_progressbar
 
 
 class Mat:
@@ -69,7 +19,7 @@ class Mat:
         :param verbose: Show progressbar if true
         :return: None
         """
-        reader = delimited_reader(open(file), ' ')
+        reader = delimited_reader(open(file), ' ', '\n')
         self.size = int(reader.__next__())
         self.mat = []
         for word in reader:
@@ -87,6 +37,7 @@ class Mat:
     def hamiltonian(self, spins: iter):
         """
         Calculates hamiltonian of given spin configuration.
+
         :param spins: Spin values
         :return: Float value representing hamiltonian
         """
@@ -111,12 +62,17 @@ class Mat:
                 print_progressbar(i, self.size, prefix='Evaluating mean field values...')
             mean_field = sum(self[i, j] * spins[j] for j in range(self.size) if j != i) + self[i, i]
             if mean_field * spins[i] > 0:
+                if verbose:
+                    print('\r')
                 return False
+        if verbose:
+            print('\r')
         return True
 
     def __getitem__(self, item):
         """
         Gets lattice element by given indices.
+
         :param item: Tuple with indices
         :return: Float value representing specified lattice element
         """
@@ -125,11 +81,61 @@ class Mat:
     def __setitem__(self, idx, value):
         """
         Sets lattice element by given indices to a specified value.
+
         :param idx: Tuple with indices
         :param value: Value to set
         :return: None
         """
         self.mat[idx[0] * self.size + idx[1]] = value
+
+
+class LogInfo:
+    """
+    Contains information gathered from single program run
+    """
+
+    def __init__(self, blocks):
+        """
+        :param blocks: List of BlockInfo objects
+        """
+        self.blocks = blocks
+
+    def select_type(self, set_type, attribute=None):
+        """
+        Return needed attribute of SetInfo object with specified type.
+        :param set_type: SetType object
+        :param attribute: String containing needed attribute
+        :return: List with attribute objects
+        """
+        if set_type is None and attribute is None:
+            return [set_info for block in self.blocks for set_info in block]
+        if set_type is None:
+            return [set_info.__dict__[attribute] for block in self.blocks for set_info in block]
+        if attribute is None:
+            return [set_info for block in self.blocks for set_info in block if
+                    set_info.set_type == set_type]
+        return [set_info.__dict__[attribute] for block in self.blocks for set_info in block if
+                set_info.set_type == set_type]
+
+    def __getitem__(self, item):
+        """
+        Get temperature slice.
+        :param item: Slice object
+        :return: Another LogInfo object
+        """
+        if type(item) == slice:
+            if item.step is not None:
+                raise ValueError('Invalid temperature slice')
+            return LogInfo([block for block in self.blocks if item.start < block.start_temperature < item.stop])
+        else:
+            raise AssertionError('Not a temperature slice')
+
+    def __iter__(self):
+        """
+        Get list iterator to achieve backward compatibility.
+        :return: List iterator
+        """
+        return self.blocks.__iter__()
 
 
 class BlockInfo:
@@ -148,7 +154,8 @@ class BlockInfo:
 
     def append_set(self, **kwargs):
         """
-        Add new set to block
+        Add new set to block.
+
         :param kwargs: Dict with parameters describing a SetInfo object
         :return: None
         """
@@ -182,6 +189,14 @@ class BlockInfo:
             self.sets[i].merge(other.sets[i])
 
     def update_set(self, index, set_info):
+        """
+        Update information about specific set in block.
+        Avoid usage if possible.
+
+        :param index: Set index in block
+        :param set_info: Object containing required information
+        :return: None
+        """
         if index >= len(self.sets):
             raise IndexError(f'No set with index {index} in block')
         self.sets[index].merge(set_info)
@@ -209,6 +224,16 @@ class BlockInfo:
             raise TypeError('Type mismatch: unable to compare {} with {}'.format(
                 type(self), type(other)))
         return self.start_temperature == other.start_temperature
+
+
+class SetType:
+    """
+    Contains possible set_type values
+    """
+    INDEPENDENT = 'Independent'
+    DEPENDENT = 'Dependent'
+    NO_ANNEAL = 'No-anneal'
+    UNDEFINED = 'Undefined'
 
 
 class SetInfo:
@@ -264,7 +289,7 @@ class SetInfo:
         Compare two SetInfo objects. Two sets considered equal if resulting spin values match.
 
         :param other: The other SetInfo object to compare with
-        :return: True if objects are considered equal, false otherwise
+        :return: Comparison result
         """
         if type(self) != type(other):
             raise TypeError('Type mismatch: unable to compare {} with {}'.format(
@@ -279,13 +304,18 @@ class SetInfo:
                 return False
         return True
 
+    def __len__(self):
+        return len(self.spins)
+
     def __str__(self):
         """
         :return: String representation of set info
         """
-        return ''.join([f'Hamiltonian: {self.hamiltonian}, ',
-                        f'{self.steps} annealing steps, ' if self.steps is not None else '',
-                        f'type: {self.set_type}, ' if self.set_type is not None else 'type: Undefined, ',
-                        f'spins:\n{self.spins}\nInitial spins:\n{self.initial_spins}\n' if self.spins is not None
-                        else ''
-                        ])
+        return ''.join([
+            f'Hamiltonian: {self.hamiltonian}, ',
+            f'start temperature: {self.start_temperature}, ',
+            f'{self.steps} annealing steps, ' if self.steps is not None else '',
+            f'type: {self.set_type}, ' if self.set_type is not None else 'type: Undefined, ',
+            f'spins:\n{self.spins}\nInitial spins:\n{self.initial_spins}\n' if self.spins is not None
+            else ''
+        ])

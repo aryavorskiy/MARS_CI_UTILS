@@ -1,4 +1,4 @@
-from Universal.ParseExtensions import print_progressbar
+from Universal.ParseUtils import print_progressbar
 
 
 def push_to_top(top_data, element, compare):
@@ -51,7 +51,7 @@ def verbose_top(top_data, filename=None):
     """
     writer = None if filename is None else open(filename, 'w')
     for top_record in top_data:
-        line = '#{:<3}: {:<10} with {:^5} hits'.format(top_data.index(top_record) + 1, *top_record)
+        line = '#{:>3}: {:<10} with {:^5} hits'.format(top_data.index(top_record) + 1, *top_record)
         if str(top_record[0]).count('\n') != 0:
             line += '\n'
         print(line, file=writer)

@@ -1,3 +1,4 @@
+from MARS_CI.DataTypes import SetType
 from MARS_CI.Parser import parse_auto
 from Universal import Plot
 from Universal.Analyze.FindMax import analyze_set_top
@@ -12,9 +13,8 @@ from Universal.Analyze.Histogram import get_histogram, get_bounds
 while True:
     title = input('Title? ')
     pl = Plot.Plot(title)
-    blocks = parse_auto(input('Filename? '))
-    ham_dir = [set_info.hamiltonian for block in blocks for set_info in block if set_info.set_type == 'Independent']
-    ham_dep = [set_info.hamiltonian for block in blocks for set_info in block if set_info.set_type == 'Dependent']
+    log = parse_auto(input('Filename? '))
+    ham_dir, ham_dep = map(log.select_type, (SetType.INDEPENDENT, SetType.DEPENDENT), ['hamiltonian'] * 2)
     bounds = get_bounds(ham_dep)
     print('Graph xrange set to {}'.format(bounds))
 
