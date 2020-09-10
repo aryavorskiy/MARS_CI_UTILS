@@ -1,5 +1,5 @@
 from Universal.DataTypes import NpArray
-from Universal.ParseUtils import delimited_reader, print_progressbar
+from Universal.Utils import print_progressbar
 
 
 class Mat:
@@ -9,9 +9,9 @@ class Mat:
 
     def __init__(self, size=0):
         self.size = size
-        self.mat = []
+        self.mat = NpArray([[0.] * size] * size)
 
-    def load(self, file: str, verbose=True):
+    def load_file(self, file: str, verbose=True):
         """
         Loads lattice values from given file.
 
@@ -19,22 +19,75 @@ class Mat:
         :param verbose: Show progressbar if true
         :return: None
         """
-        reader = delimited_reader(open(file), ' ', '\n')
-        self.size = int(reader.__next__())
-        self.mat = []
-        for word in reader:
-            if verbose:
-                print_progressbar(len(self.mat), self.size ** 2, prefix='Loading lattice...')
-            self.mat.append(float(word))
-            if len(self.mat) == self.size ** 2:
-                break
+        reader = open(file)
+        first_line = reader.__next__()
+        self.size = int(first_line.split()[0])
+        if len(first_line.split()) == 1:
+            mat = []
+            for line in reader:
+                if verbose:
+                    print_progressbar(len(self.mat), self.size, prefix='Loading lattice...')
+                mat.append([float(x) for x in line.split()])
+                if len(mat) == self.size:
+                    break
+            self.mat = NpArray(mat)
+        elif len(first_line.split()) == 2:
+            for line in reader:
+                i, j, val = line.split()
+                self.mat[i, j] = self.mat[j, i] = val
         for i in range(self.size):
             for j in range(i):
-                self[i, j] = self[j, i]
-        for i in range(self.size):
-            self[i, i] = 0
+                self.mat[i, j] = self.mat[j, i]
+        if self.size != len(self.mat) or self.size != len(self.mat[0]):
+            self.size = 0
+            self.mat = NpArray()
+            raise ValueError(
+                f'Invalid matrix dimensions emerge: {len(self.mat)}x{len(self.mat[0])}, expected {self.size}')
 
-    def hamiltonian(self, spins: iter):
+    def load_values(self, mat, linear_element):
+        """
+        Loads lattice values from two matrices representing the matrix and the linear member.
+
+        :param mat: Matrix values
+        :param linear_element: Linear element values
+        :return: None
+        """
+        self.size = len(mat)
+        self.mat = NpArray(mat)
+        if type(linear_element) in {float, int}:
+            for i in range(len(self.mat)):
+                self.mat[i, i] = linear_element
+        elif hasattr(linear_element, '__iter__'):
+            for i in range(len(self.mat)):
+                self.mat[i, i] = linear_element[i] if i < len(linear_element) else linear_element[-1]
+        else:
+            raise TypeError(
+                f'Unsupported linear_element type: \'{type(linear_element)}\', expected int, float or iterable')
+
+    def dump(self, filename, export_type):
+        """
+        Save lattice values in a file
+
+        :param filename: File to save lattice
+        :param export_type: Lattice file format: 'lattice' or 'graph'
+        :return:
+        """
+        writer = open(filename, 'w')
+        if export_type == 'lattice':
+            writer.write(f'{self.size}\n')
+            for line in self.mat:
+                writer.write(' '.join([str(x) for x in line]) + '\n')
+        elif export_type == 'graph':
+            # TODO optimize
+            writer.write(f'{self.size} {self.size * (self.size + 1) / 2}\n')
+            for i in range(self.size):
+                for j in range(i + 1, self.size):
+                    writer.write(f'{i} {j} {self.mat[i, j]}\n')
+        else:
+            raise ValueError(f'No export type {export_type} implemented')
+        writer.close()
+
+    def hamiltonian(self, spins: iter, type_mat_prod=True):
         """
         Calculates hamiltonian of given spin configuration.
 
@@ -45,8 +98,9 @@ class Mat:
             raise ValueError('Spin count ({}) does not correspond to mat size ({})'.format(len(spins), self.size))
         hamiltonian = 0.
         for i in range(self.size):
-            for j in range(i + 1, self.size):
-                hamiltonian += self[i, j] * spins[i] * spins[j]
+            for j in range(self.size):
+                hamiltonian += 0 if (not type_mat_prod and i < j) else self[i, j] * spins[i] * spins[j] if i != j else \
+                    spins[i] * self[i, i]
         return hamiltonian
 
     def is_local_minimum(self, spins: iter, verbose=True):
@@ -76,7 +130,7 @@ class Mat:
         :param item: Tuple with indices
         :return: Float value representing specified lattice element
         """
-        return self.mat[item[0] * self.size + item[1]]
+        return self.mat[item[0], item[1]]
 
     def __setitem__(self, idx, value):
         """
@@ -86,7 +140,10 @@ class Mat:
         :param value: Value to set
         :return: None
         """
-        self.mat[idx[0] * self.size + idx[1]] = value
+        self.mat[idx[0], idx[1]] = value
+
+    def __eq__(self, other):
+        pass
 
 
 class LogInfo:

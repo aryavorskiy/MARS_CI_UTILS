@@ -1,4 +1,4 @@
-from Universal.ParseUtils import print_progressbar
+from Universal.Utils import print_progressbar
 
 
 def push_to_top(top_data, element, compare):

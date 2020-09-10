@@ -2,7 +2,7 @@ import numpy as np
 
 from MARS_CI.DataTypes import BlockInfo, LogInfo, SetType
 from Universal.DataTypes import NpArray
-from Universal.ParseUtils import file_length, print_progressbar
+from Universal.Utils import file_length, print_progressbar
 
 
 def parse_auto(file, verbose=True):
@@ -14,7 +14,7 @@ def parse_auto(file, verbose=True):
     :return: List of BlockInfo objects
     """
     first_line = open(file).__next__()
-    if first_line.startswith('-------'):
+    if first_line.startswith('-------') or first_line.startswith('t e'):
         return parse_output(file, verbose)
     elif first_line.startswith('Started'):
         return parse_log(file, verbose)
